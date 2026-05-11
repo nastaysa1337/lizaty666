@@ -15,15 +15,9 @@ document.documentElement.classList.add('is-loading');
     document.body.appendChild(div('brand-cursor'));
     document.body.appendChild(div('brand-cursor-dot'));
     document.body.appendChild(div('moon-light'));
-    var zodiac=div('zodiac-bg');zodiac.setAttribute('aria-hidden','true');
-    ['♈','♏','♓','♑','♊','♌'].forEach(function(sign,i){
-      var s=document.createElement('span');
-      s.textContent=sign;
-      s.style.left=[8,20,37,54,70,86][i]+'%';
-      s.style.setProperty('--dur',[22,16,24,18,21,17][i]+'s');
-      zodiac.appendChild(s);
-    });
-    document.body.appendChild(zodiac);
+
+    /* Убраны летающие знаки зодиака */
+    document.querySelectorAll('.zodiac-bg').forEach(function(el){el.remove();});
   }
 })();
 
