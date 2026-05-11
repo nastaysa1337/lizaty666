@@ -1,6 +1,7 @@
 document.documentElement.classList.add('is-loading');
 
-(function initBrandUi(){
+function initBrandUi(){
+  if(!document.body) return;
   function div(c){var e=document.createElement('div');e.className=c;return e;}
 
   if(!document.querySelector('.brand-loader')){
@@ -22,18 +23,27 @@ document.documentElement.classList.add('is-loading');
   if(!document.querySelector('.brand-cursor-dot')) document.body.appendChild(div('brand-cursor-dot'));
   if(!document.querySelector('.moon-light')) document.body.appendChild(div('moon-light'));
   document.querySelectorAll('.zodiac-bg').forEach(function(el){el.remove();});
-})();
+}
 
-(function addMobileHeroFix(){
-  var css = '@media(max-width:768px){' +
-    '#hero.home-hero-upgraded .photo-hero img,#hero .photo-hero img{' +
-      'left:50%!important;right:auto!important;width:106%!important;transform:translateX(-51%)!important;object-fit:contain!important;object-position:center top!important;' +
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', initBrandUi);
+}else{
+  initBrandUi();
+}
+
+(function addGlobalSafetyCss(){
+  var css = '.zodiac-bg,.zodiac-bg *{display:none!important;animation:none!important}' +
+    '@media(max-width:768px){' +
+      '#hero.home-hero-upgraded .photo-hero img,#hero .photo-hero img{' +
+        'left:50%!important;right:auto!important;width:106%!important;transform:translateX(-51%)!important;object-fit:contain!important;object-position:center top!important;' +
+      '}' +
+      '#hero.home-hero-upgraded .hero-visual,#hero .hero-visual{overflow:hidden!important;}' +
     '}' +
-    '#hero.home-hero-upgraded .hero-visual,#hero .hero-visual{overflow:hidden!important;}' +
-  '}' +
-  '@media(max-width:480px){' +
-    '#hero.home-hero-upgraded .photo-hero img,#hero .photo-hero img{width:104%!important;transform:translateX(-50%)!important;}' +
-  '}';
+    '@media(max-width:480px){' +
+      '#hero.home-hero-upgraded .photo-hero img,#hero .photo-hero img{width:104%!important;transform:translateX(-50%)!important;}' +
+    '}';
+  var old=document.getElementById('mobile-hero-position-fix');
+  if(old) old.remove();
   var style=document.createElement('style');
   style.id='mobile-hero-position-fix';
   style.textContent=css;
@@ -52,6 +62,8 @@ window.addEventListener('load', function(){
 setTimeout(hideBrandLoader, 1800);
 
 document.addEventListener('DOMContentLoaded', function(){
+  initBrandUi();
+
   var stars=document.getElementById('starsContainer');
   if(stars && !stars.dataset.ready){
     stars.dataset.ready='1';
@@ -79,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('.fi').forEach(function(el){el.classList.add('vis');});
   }
 
-  document.querySelectorAll('.card').forEach(function(card){
+  document.querySelectorAll('.card,.cinematic-card,.service-card,.service-full,.prog-card,.prod-card,.screenshot-slot,.whom-card,.mod-card').forEach(function(card){
     card.addEventListener('mousemove', function(e){
       var r=card.getBoundingClientRect();
       card.style.setProperty('--mx', (e.clientX-r.left)+'px');
@@ -122,19 +134,23 @@ function toggleExpand(btn){
 }
 
 (function brandCursor(){
-  var cursor=document.querySelector('.brand-cursor');
-  var dot=document.querySelector('.brand-cursor-dot');
-  if(!cursor || !dot) return;
-  window.addEventListener('mousemove', function(e){
-    cursor.style.left=e.clientX+'px';
-    cursor.style.top=e.clientY+'px';
-    dot.style.left=e.clientX+'px';
-    dot.style.top=e.clientY+'px';
-  });
-  document.addEventListener('mouseover', function(e){
-    if(e.target.closest('a,button,.card')) cursor.classList.add('hover');
-  });
-  document.addEventListener('mouseout', function(e){
-    if(e.target.closest('a,button,.card')) cursor.classList.remove('hover');
-  });
+  function initCursor(){
+    var cursor=document.querySelector('.brand-cursor');
+    var dot=document.querySelector('.brand-cursor-dot');
+    if(!cursor || !dot) return;
+    window.addEventListener('mousemove', function(e){
+      cursor.style.left=e.clientX+'px';
+      cursor.style.top=e.clientY+'px';
+      dot.style.left=e.clientX+'px';
+      dot.style.top=e.clientY+'px';
+    });
+    document.addEventListener('mouseover', function(e){
+      if(e.target.closest('a,button,.card')) cursor.classList.add('hover');
+    });
+    document.addEventListener('mouseout', function(e){
+      if(e.target.closest('a,button,.card')) cursor.classList.remove('hover');
+    });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initCursor);
+  else initCursor();
 })();
