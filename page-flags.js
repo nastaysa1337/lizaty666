@@ -1,0 +1,1 @@
+document.addEventListener('DOMContentLoaded',function(){var p=location.pathname;if(p.indexOf('runes')>-1)document.body.classList.add('page-runes');if(p.indexOf('candles')>-1)document.body.classList.add('page-candles');if(p.indexOf('education')>-1)document.body.classList.add('page-education');if(p.indexOf('astrology')>-1)document.body.classList.add('page-astrology')});
