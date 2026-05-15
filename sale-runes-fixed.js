@@ -1,0 +1,1 @@
+document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.service-full').forEach(function(c){var t=c.textContent,p=c.querySelector('.svc-price');if(!p)return;if(t.indexOf('Совет от рун')>-1)p.innerHTML='<span class="sale-current solo">1 666 ₽</span>';if(t.indexOf('Рунический став')>-1)p.innerHTML='<span class="sale-current solo">4 666 ₽</span>'})});
