@@ -1,4 +1,4 @@
-(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='mobile-hero-short.css';document.head.appendChild(l);})();
+(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='mobile-hero-short.css';document.head.appendChild(l);var s=document.createElement('script');s.src='sale-timer.js';s.defer=true;document.head.appendChild(s);})();
 function openMenu(btn){var n=document.getElementById('mobileNav')||document.getElementById('mobNav');if(n)n.classList.add('open');if(btn)btn.setAttribute('aria-expanded','true')}
 function closeMenu(){var n=document.getElementById('mobileNav')||document.getElementById('mobNav');if(n)n.classList.remove('open');var b=document.querySelector('.burger');if(b)b.setAttribute('aria-expanded','false')}
 function openMob(btn){openMenu(btn)}function closeMob(){closeMenu()}
