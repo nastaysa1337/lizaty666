@@ -117,6 +117,13 @@ function toggleExpand(btn){
       flagship.parentNode.insertBefore(popular,flagship.nextSibling);
     }
     var finalCta=document.getElementById('final-cta');
+    if(finalCta&&!document.getElementById('review-proof')){
+      var reviews=document.createElement('section');
+      reviews.id='review-proof';
+      reviews.className='enhanced-section reviews-section';
+      reviews.innerHTML='<div class="container"><div class="review-proof-card"><div><div class="section-label">Отзывы</div><h2 class="section-title fi vis">Сначала можно посмотреть живые реакции</h2><p class="section-sub fi vis">Отзывы клиентов собраны в отдельном Telegram-канале: скриншоты сообщений, реакции после разборов, обучения, свечей и консультаций.</p></div><div class="review-actions"><a class="btn-primary" href="reviews.html">Отзывы на сайте</a><a class="btn-secondary" href="https://t.me/+dSRMo6E88dk4MjI6" target="_blank" rel="noopener noreferrer">Канал отзывов</a></div></div></div>';
+      finalCta.parentNode.insertBefore(reviews,finalCta);
+    }
     if(finalCta&&!document.getElementById('trust-block')){
       var trust=document.createElement('section');
       trust.id='trust-block';
