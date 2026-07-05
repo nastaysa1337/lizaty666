@@ -1,162 +1,150 @@
 (function(){
-  var styles=['mobile-hero-short.css','site-improvements.css'];
-  styles.forEach(function(h){
-    if(document.querySelector('link[href="'+h+'"]')) return;
-    var l=document.createElement('link');
-    l.rel='stylesheet';
-    l.href=h;
-    document.head.appendChild(l);
-  });
-})();
+  var path=(location.pathname.split('/').pop()||'index.html');
+  var isHome=path==='index.html' || path==='';
+  var premiumVideo='https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260508_064122_c4750c0e-7476-4b44-94a2-a85a65c63bf2.mp4';
 
-function openMenu(btn){
-  var n=document.getElementById('mobileNav')||document.getElementById('mobNav');
-  if(n)n.classList.add('open');
-  if(btn)btn.setAttribute('aria-expanded','true');
-}
-function closeMenu(){
-  var n=document.getElementById('mobileNav')||document.getElementById('mobNav');
-  if(n)n.classList.remove('open');
-  var b=document.querySelector('.burger');
-  if(b)b.setAttribute('aria-expanded','false');
-}
-function openMob(btn){openMenu(btn)}
-function closeMob(){closeMenu()}
-function toggleFaq(btn){
-  var i=btn.closest('.faq-item');
-  if(!i)return;
-  var o=i.classList.contains('open');
-  document.querySelectorAll('.faq-item').forEach(function(x){
-    x.classList.remove('open');
-    var b=x.querySelector('.faq-q');
-    if(b)b.setAttribute('aria-expanded','false');
-  });
-  if(!o){i.classList.add('open');btn.setAttribute('aria-expanded','true')}
-}
-function toggleExpand(btn){
-  var b=btn.nextElementSibling;
-  if(!b)return;
-  var o=b.classList.contains('open');
-  b.classList.toggle('open',!o);
-  btn.setAttribute('aria-expanded',String(!o));
-}
+  if(!isHome){
+    document.documentElement.style.background='#0c0c0c';
+    if(document.body) document.body.classList.add('premium-inner');
+    ['mobile-hero-short.css','site-improvements.css'].forEach(function(href){
+      if(document.querySelector('link[href="'+href+'"]')) return;
+      var link=document.createElement('link');
+      link.rel='stylesheet';
+      link.href=href;
+      document.head.appendChild(link);
+    });
+  }
 
-(function(){
-  function addMeta(attr,name,content){
-    if(!content)return;
-    var selector='meta['+attr+'="'+name+'"]';
-    var m=document.querySelector(selector);
-    if(!m){m=document.createElement('meta');m.setAttribute(attr,name);document.head.appendChild(m)}
-    m.setAttribute('content',content);
+  function ensurePremiumScene(){
+    if(isHome || document.getElementById('premiumScene')) return;
+    document.body.classList.add('premium-inner');
+
+    var svg=document.createElement('div');
+    svg.className='premium-noise-svg';
+    svg.innerHTML='<svg width="0" height="0" aria-hidden="true"><filter id="c3-noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.35 0"/><feComposite in2="SourceGraphic" operator="in" result="noise"/><feBlend in="SourceGraphic" in2="noise" mode="multiply"/></filter></svg>';
+    document.body.insertBefore(svg,document.body.firstChild);
+
+    var scene=document.createElement('div');
+    scene.id='premiumScene';
+    scene.innerHTML='<div class="premium-bg-video"><video autoplay loop muted playsinline src="'+premiumVideo+'"></video></div><div class="premium-guide left"></div><div class="premium-guide right"></div>';
+    document.body.insertBefore(scene,document.body.firstChild);
   }
-  function addLink(rel,href){
-    if(!href||document.querySelector('link[rel="'+rel+'"]'))return;
-    var l=document.createElement('link');l.rel=rel;l.href=href;document.head.appendChild(l);
+
+  function injectMacBar(){
+    if(isHome || document.querySelector('.premium-macbar')) return;
+    var header=document.querySelector('header');
+    if(!header) return;
+    var bar=document.createElement('div');
+    bar.className='premium-macbar reveal';
+    bar.innerHTML='<div class="premium-macbar-inner"><div class="premium-macbar-left"><svg width="14" height="14" viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><strong>liz_ty666</strong><span>Разборы</span><span>Астрология</span><span>Руны</span><span>Свечи</span><span>Обучение</span></div><div class="premium-macbar-right"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Wed May 6 1:09 PM</span></div></div>';
+    header.insertAdjacentElement('afterend',bar);
   }
-  function ensureSeo(){
-    var url='https://lizty666.ru'+location.pathname.replace(/index\.html$/,'');
-    var image='https://lizty666.ru/assets/212CB13A-DFA8-4E37-BF86-4F200A4A0E9A.png';
-    addLink('canonical',url);
-    addMeta('name','theme-color','#050505');
-    addMeta('name','robots','index,follow');
-    addMeta('property','og:url',url);
-    addMeta('property','og:image',image);
-    addMeta('property','og:image:alt','liz_ty666 — астрология, руны, свечи и обучение');
-    addMeta('name','twitter:card','summary_large_image');
-    addMeta('name','twitter:image',image);
-    addMeta('name','twitter:title',document.title);
-    var desc=document.querySelector('meta[name="description"]');
-    if(desc)addMeta('name','twitter:description',desc.getAttribute('content'));
-    if(!document.getElementById('liz-schema')){
-      var s=document.createElement('script');
-      s.type='application/ld+json';
-      s.id='liz-schema';
-      s.textContent=JSON.stringify({
-        '@context':'https://schema.org',
-        '@type':'Person',
-        name:'liz_ty666',
-        url:'https://lizty666.ru/',
-        sameAs:['https://t.me/liz_ty666'],
-        knowsAbout:['астрология','руны','свечные практики','прогнозы','обучение'],
-        offers:{
-          '@type':'OfferCatalog',
-          name:'Консультации, руны, свечи и обучение',
-          itemListElement:[
-            {'@type':'Offer',name:'Лиза, что делать?',price:'2766',priceCurrency:'RUB'},
-            {'@type':'Offer',name:'Астрология и прогнозы',priceSpecification:{'@type':'PriceSpecification',priceCurrency:'RUB',minPrice:'3666'}},
-            {'@type':'Offer',name:'Руны',priceSpecification:{'@type':'PriceSpecification',priceCurrency:'RUB',minPrice:'1666'}},
-            {'@type':'Offer',name:'Свечи',priceSpecification:{'@type':'PriceSpecification',priceCurrency:'RUB',minPrice:'666'}}
-          ]
-        }
-      });
-      document.head.appendChild(s);
+
+  function openMenu(btn){
+    var menu=document.getElementById('mobileNav')||document.getElementById('mobNav');
+    if(menu) menu.classList.add('open');
+    if(btn) btn.setAttribute('aria-expanded','true');
+    document.addEventListener('keydown',handleEsc);
+  }
+
+  function closeMenu(){
+    var menu=document.getElementById('mobileNav')||document.getElementById('mobNav');
+    if(menu) menu.classList.remove('open');
+    var burger=document.querySelector('.menu-btn,.burger');
+    if(burger) burger.setAttribute('aria-expanded','false');
+    document.removeEventListener('keydown',handleEsc);
+  }
+
+  function handleEsc(e){
+    if(e.key==='Escape') closeMenu();
+  }
+
+  function toggleFaq(btn){
+    var item=btn.closest('.faq-item');
+    if(!item) return;
+    var isOpen=item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(function(x){
+      x.classList.remove('open');
+      var q=x.querySelector('.faq-q');
+      if(q) q.setAttribute('aria-expanded','false');
+    });
+    if(!isOpen){
+      item.classList.add('open');
+      btn.setAttribute('aria-expanded','true');
     }
   }
+
+  function toggleExpand(btn){
+    var block=btn.nextElementSibling;
+    if(!block) return;
+    var isOpen=block.classList.contains('open');
+    block.classList.toggle('open',!isOpen);
+    btn.setAttribute('aria-expanded',String(!isOpen));
+  }
+
+  window.openMenu=openMenu;
+  window.closeMenu=closeMenu;
+  window.openMob=openMenu;
+  window.closeMob=closeMenu;
+  window.toggleFaq=toggleFaq;
+  window.toggleExpand=toggleExpand;
+
+  function revealOnScroll(){
+    var elements=document.querySelectorAll('.reveal,.fi,.card,.info-card,.faq-item,.list-block li,.choice-card,.popular-list a,.trust-grid>div');
+    if(!('IntersectionObserver' in window)){
+      elements.forEach(function(el){el.classList.add('visible','vis')});
+      return;
+    }
+    var observer=new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          entry.target.classList.add('visible','vis');
+          observer.unobserve(entry.target);
+        }
+      });
+    },{threshold:.08,rootMargin:'0px 0px -40px 0px'});
+    elements.forEach(function(el){
+      el.classList.add('reveal');
+      observer.observe(el);
+    });
+  }
+
   function setActiveLinks(){
     var current=(location.pathname.split('/').pop()||'index.html');
     document.querySelectorAll('a[href]').forEach(function(a){
       var href=a.getAttribute('href');
-      if(href===current || (current==='index.html' && href==='index.html')) a.setAttribute('aria-current','page');
+      if(href===current || (current==='index.html' && href==='index.html')){
+        a.setAttribute('aria-current','page');
+      }
     });
   }
-  function injectHomeBlocks(){
-    if(!document.getElementById('routes')||document.getElementById('decision-helper'))return;
-    var routes=document.getElementById('routes');
-    var helper=document.createElement('section');
-    helper.id='decision-helper';
-    helper.className='enhanced-section';
-    helper.innerHTML='<div class="container"><div class="section-label">Быстрый выбор</div><h2 class="section-title fi vis">Не знаете, что выбрать?</h2><p class="section-sub fi vis">Выберите состояние — сайт сразу подскажет подходящий формат.</p><div class="choice-grid"><a class="choice-card" href="liza-chto-delat.html"><span>01</span><h3>У меня горит ситуация</h3><p>Нужен быстрый ориентир и понятный следующий шаг.</p><b>Лиза, что делать? →</b></a><a class="choice-card" href="astrology.html"><span>02</span><h3>Хочу понять период</h3><p>Месяц, год, отношения, финансы, карта и сценарии.</p><b>Астрология →</b></a><a class="choice-card" href="runes.html"><span>03</span><h3>Нужно увидеть скрытое</h3><p>Энергия ситуации, выбор, препятствия и направление.</p><b>Руны →</b></a><a class="choice-card" href="candles.html"><span>04</span><h3>Нужна практика</h3><p>Свечи, очищение, намерение и работа с состоянием.</p><b>Свечи →</b></a></div></div>';
-    routes.parentNode.insertBefore(helper,routes.nextSibling);
 
-    var flagship=document.getElementById('flagship');
-    if(flagship&&!document.getElementById('popular-formats')){
-      var popular=document.createElement('section');
-      popular.id='popular-formats';
-      popular.className='enhanced-section popular-section';
-      popular.innerHTML='<div class="container"><div class="section-label">Популярное</div><h2 class="section-title fi vis">Самые понятные входы</h2><div class="popular-list"><a href="liza-chto-delat.html"><strong>2 766 ₽</strong><span>Лиза, что делать?</span><em>1 запрос · голосовыми · 2–3 дня</em></a><a href="astrology.html"><strong>3 666 ₽</strong><span>Прогноз на месяц</span><em>периоды, риски, ресурс</em></a><a href="runes.html"><strong>2 766 ₽</strong><span>Консультация по рунам</span><em>энергия ситуации и лучший шаг</em></a><a href="candles.html"><strong>от 666 ₽</strong><span>Свечи и наборы</span><em>намерение, очищение, состояние</em></a></div></div>';
-      flagship.parentNode.insertBefore(popular,flagship.nextSibling);
-    }
-    var finalCta=document.getElementById('final-cta');
-    if(finalCta&&!document.getElementById('review-proof')){
-      var reviews=document.createElement('section');
-      reviews.id='review-proof';
-      reviews.className='enhanced-section reviews-section';
-      reviews.innerHTML='<div class="container"><div class="review-proof-card"><div><div class="section-label">Отзывы</div><h2 class="section-title fi vis">Сначала можно посмотреть живые реакции</h2><p class="section-sub fi vis">Отзывы клиентов собраны в отдельном Telegram-канале: скриншоты сообщений, реакции после разборов, обучения, свечей и консультаций.</p></div><div class="review-actions"><a class="btn-primary" href="reviews.html">Отзывы на сайте</a><a class="btn-secondary" href="https://t.me/+dSRMo6E88dk4MjI6" target="_blank" rel="noopener noreferrer">Канал отзывов</a></div></div></div>';
-      finalCta.parentNode.insertBefore(reviews,finalCta);
-    }
-    if(finalCta&&!document.getElementById('trust-block')){
-      var trust=document.createElement('section');
-      trust.id='trust-block';
-      trust.className='enhanced-section trust-section';
-      trust.innerHTML='<div class="container"><div class="section-label">Доверие</div><h2 class="section-title fi vis">Что важно знать до записи</h2><div class="trust-grid"><div><h3>Без обещаний чуда</h3><p>Разбор даёт ясность, но решение всегда остаётся за вами.</p></div><div><h3>Формат заранее понятен</h3><p>На страницах указаны цены, сроки, формат и что подготовить.</p></div><div><h3>Запись в Telegram</h3><p>Можно коротко описать ситуацию, а Лиза подскажет подходящий формат.</p></div></div></div>';
-      finalCta.parentNode.insertBefore(trust,finalCta);
-    }
+  function bindGlassPointer(){
+    document.querySelectorAll('.liquid-glass,.c3-card,.request,.quote-card,.card,.info-card,.faq-item,.choice-card,.popular-list a,.trust-grid>div').forEach(function(card){
+      card.addEventListener('mousemove',function(e){
+        var rect=card.getBoundingClientRect();
+        card.style.setProperty('--mx',((e.clientX-rect.left)/rect.width)*100+'%');
+        card.style.setProperty('--my',((e.clientY-rect.top)/rect.height)*100+'%');
+      });
+    });
   }
-  function enhanceFooter(){
-    var footer=document.querySelector('footer,.footer');
-    if(!footer||footer.querySelector('.legal-links'))return;
-    var box=document.createElement('div');
-    box.className='legal-links';
-    box.innerHTML='<a href="privacy.html">Политика конфиденциальности</a><a href="offer.html">Условия услуг</a><a href="contacts.html">Контакты</a>';
-    footer.appendChild(box);
+
+  function setSeo(){
+    var canonical=document.querySelector('link[rel="canonical"]');
+    if(!canonical){
+      canonical=document.createElement('link');
+      canonical.rel='canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href='https://lizty666.ru'+location.pathname.replace(/index\.html$/,'');
   }
+
   document.addEventListener('DOMContentLoaded',function(){
-    ensureSeo();
+    ensurePremiumScene();
+    injectMacBar();
+    setSeo();
     setActiveLinks();
-    injectHomeBlocks();
-    enhanceFooter();
-    document.querySelectorAll('.fi').forEach(function(e){e.classList.add('vis')});
-    var c=document.getElementById('starsContainer');
-    if(c&&!c.dataset.ready){
-      c.dataset.ready='1';
-      for(var i=0;i<40;i++){
-        var s=document.createElement('span');
-        s.className='star';
-        s.style.left=Math.random()*100+'%';
-        s.style.top=Math.random()*100+'%';
-        s.style.setProperty('--dur',2+Math.random()*4+'s');
-        c.appendChild(s);
-      }
-    }
+    revealOnScroll();
+    bindGlassPointer();
   });
 })();
