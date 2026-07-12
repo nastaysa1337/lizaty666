@@ -298,3 +298,5 @@
     initialize();
   }
 })();
+
+/* editorial bootstrap trigger */
