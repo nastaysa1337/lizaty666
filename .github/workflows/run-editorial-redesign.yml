@@ -1,0 +1,316 @@
+name: Run editorial redesign
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  redesign:
+    if: github.event.head_commit.message == 'chore: run editorial redesign'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout redesign branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/editorial-astrology-redesign
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Inject design resources
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          css_tag = '<link rel="stylesheet" href="editorial-redesign.css">'
+          script_tag = '<script src="app.js" defer></script>'
+
+          for path in sorted(Path('.').glob('*.html')):
+              original = path.read_text(encoding='utf-8')
+              updated = original
+              if 'editorial-redesign.css' not in updated:
+                  updated = updated.replace('</head>', f'{css_tag}\n</head>', 1)
+              if 'src="app.js"' not in updated and "src='app.js'" not in updated:
+                  updated = updated.replace('</body>', f'{script_tag}\n</body>', 1)
+              if updated != original:
+                  path.write_text(updated, encoding='utf-8')
+          PY
+
+      - name: Guard texts prices links forms and routes
+        shell: bash
+        run: |
+          git fetch origin main
+          mkdir -p audit
+          python - <<'PY'
+          import json
+          import re
+          import subprocess
+          from html.parser import HTMLParser
+          from pathlib import Path
+          from urllib.parse import urlparse
+
+          css_tag = '<link rel="stylesheet" href="editorial-redesign.css">\n'
+          script_tag = '<script src="app.js" defer></script>\n'
+
+          class Snapshot(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=False)
+                  self.hidden = 0
+                  self.text = []
+                  self.links = []
+                  self.forms = []
+                  self.ids = []
+
+              def handle_starttag(self, tag, attrs):
+                  attrs = dict(attrs)
+                  if tag in {'script', 'style'}:
+                      self.hidden += 1
+                  if attrs.get('id'):
+                      self.ids.append(attrs['id'])
+                  if tag == 'a' and attrs.get('href'):
+                      self.links.append(attrs['href'])
+                  if tag == 'form':
+                      self.forms.append((attrs.get('action', ''), attrs.get('method', '')))
+
+              def handle_endtag(self, tag):
+                  if tag in {'script', 'style'} and self.hidden:
+                      self.hidden -= 1
+
+              def handle_data(self, data):
+                  if not self.hidden and data.strip():
+                      self.text.append(data)
+
+          failures = []
+          report = []
+          pages = sorted(Path('.').glob('*.html'))
+
+          for page in pages:
+              baseline = subprocess.check_output(['git', 'show', f'origin/main:{page.as_posix()}'], text=True, encoding='utf-8')
+              current = page.read_text(encoding='utf-8')
+              cleaned = current.replace(css_tag, '').replace(script_tag, '')
+              if cleaned != baseline:
+                  failures.append(f'{page}: HTML changed outside resource tags')
+
+              before = Snapshot(); before.feed(baseline)
+              after = Snapshot(); after.feed(current)
+              if before.text != after.text:
+                  failures.append(f'{page}: visible text changed')
+              if before.links != after.links:
+                  failures.append(f'{page}: links changed')
+              if before.forms != after.forms:
+                  failures.append(f'{page}: forms changed')
+              if len(after.ids) != len(set(after.ids)):
+                  failures.append(f'{page}: duplicate ids')
+
+              before_prices = re.findall(r'\d[\d\s]*₽(?:\s*/\s*час)?', ''.join(before.text))
+              after_prices = re.findall(r'\d[\d\s]*₽(?:\s*/\s*час)?', ''.join(after.text))
+              if before_prices != after_prices:
+                  failures.append(f'{page}: prices changed')
+
+              for href in after.links:
+                  parsed = urlparse(href)
+                  if parsed.scheme or href.startswith(('#', 'mailto:', 'tel:')):
+                      continue
+                  route = parsed.path
+                  if route.endswith('.html') and not Path(route.lstrip('/')).exists():
+                      failures.append(f'{page}: missing route {href}')
+
+              report.append({
+                  'file': page.as_posix(),
+                  'text_nodes': len(after.text),
+                  'links': len(after.links),
+                  'prices': after_prices
+              })
+
+          Path('audit/content-guard.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+          if failures:
+              raise SystemExit('\n'.join(failures))
+          PY
+
+      - name: Install audit tools
+        shell: bash
+        run: |
+          mkdir -p /tmp/editorial-qa
+          cd /tmp/editorial-qa
+          npm init -y >/dev/null 2>&1
+          npm install --silent eslint@8 typescript playwright @axe-core/playwright
+          npx playwright install --with-deps chromium
+
+      - name: Lint typecheck and build
+        shell: bash
+        run: |
+          node --check app.js
+
+          cat >/tmp/editorial-qa/.eslintrc.json <<'JSON'
+          {
+            "env": {"browser": true, "es2021": true},
+            "parserOptions": {"ecmaVersion": 2021},
+            "rules": {
+              "no-undef": "error",
+              "no-unused-vars": ["error", {"args": "none"}]
+            }
+          }
+          JSON
+          /tmp/editorial-qa/node_modules/.bin/eslint app.js --config /tmp/editorial-qa/.eslintrc.json
+
+          cat >/tmp/editorial-qa/globals.d.ts <<'TS'
+          interface Window {
+            openMenu: (button?: HTMLElement) => void;
+            closeMenu: () => void;
+            openMob: (button?: HTMLElement) => void;
+            closeMob: () => void;
+            toggleFaq: (button: HTMLElement) => void;
+            toggleExpand: (button: HTMLElement) => void;
+          }
+          TS
+          /tmp/editorial-qa/node_modules/.bin/tsc --allowJs --checkJs --noEmit --skipLibCheck --target ES2020 --lib DOM,ES2020 app.js /tmp/editorial-qa/globals.d.ts
+
+          rm -rf dist
+          mkdir dist
+          cp -a ./*.html ./*.css ./*.js dist/
+          test -f dist/index.html
+          test -f dist/editorial-redesign.css
+          test -f dist/app.js
+
+      - name: Visual responsive accessibility audit
+        shell: bash
+        env:
+          NODE_PATH: /tmp/editorial-qa/node_modules
+        run: |
+          rm -rf /tmp/editorial-baseline
+          git worktree add --detach /tmp/editorial-baseline origin/main
+          python -m http.server 8010 --directory /tmp/editorial-baseline >/tmp/editorial-baseline.log 2>&1 &
+          BASE_PID=$!
+          python -m http.server 8011 --directory "$GITHUB_WORKSPACE" >/tmp/editorial-current.log 2>&1 &
+          CURRENT_PID=$!
+          trap 'kill $BASE_PID $CURRENT_PID || true' EXIT
+          sleep 2
+
+          cat >/tmp/editorial-qa/audit.cjs <<'JS'
+          const fs = require('fs');
+          const path = require('path');
+          const { chromium } = require('playwright');
+          const { AxeBuilder } = require('@axe-core/playwright');
+
+          const root = process.env.GITHUB_WORKSPACE;
+          const out = path.join(root, 'audit');
+          fs.mkdirSync(out, { recursive: true });
+          const pages = fs.readdirSync(root).filter((name) => name.endsWith('.html')).sort();
+          const viewports = [
+            { name: 'desktop', width: 1440, height: 1000 },
+            { name: 'mobile', width: 390, height: 844 }
+          ];
+          const widths = [320, 360, 390, 430, 768, 1024, 1440];
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const report = { pages, overflow: [], pageErrors: [], consoleErrors: [], accessibility: [], performance: [], screenshots: [] };
+
+            for (const source of [
+              { name: 'before', url: 'http://127.0.0.1:8010' },
+              { name: 'after', url: 'http://127.0.0.1:8011' }
+            ]) {
+              for (const viewport of viewports) {
+                const context = await browser.newContext({ viewport });
+                const page = await context.newPage();
+                page.on('pageerror', (error) => report.pageErrors.push({ source: source.name, page: page.url(), message: String(error) }));
+                page.on('console', (message) => {
+                  if (message.type() === 'error') report.consoleErrors.push({ source: source.name, page: page.url(), message: message.text() });
+                });
+                for (const file of pages) {
+                  await page.goto(`${source.url}/${file}`, { waitUntil: 'domcontentloaded' });
+                  await page.waitForTimeout(450);
+                  const folder = path.join(out, 'screenshots', source.name, viewport.name);
+                  fs.mkdirSync(folder, { recursive: true });
+                  const target = path.join(folder, file.replace('.html', '.png'));
+                  await page.screenshot({ path: target, fullPage: true });
+                  report.screenshots.push(path.relative(out, target));
+                }
+                await context.close();
+              }
+            }
+
+            for (const width of widths) {
+              const context = await browser.newContext({ viewport: { width, height: 900 } });
+              const page = await context.newPage();
+              page.on('pageerror', (error) => report.pageErrors.push({ source: 'after', width, page: page.url(), message: String(error) }));
+              for (const file of pages) {
+                const started = Date.now();
+                await page.goto(`http://127.0.0.1:8011/${file}`, { waitUntil: 'domcontentloaded' });
+                await page.waitForTimeout(300);
+                const metrics = await page.evaluate(() => {
+                  const root = document.documentElement;
+                  const nav = performance.getEntriesByType('navigation')[0];
+                  return {
+                    viewport: window.innerWidth,
+                    scrollWidth: root.scrollWidth,
+                    bodyScrollWidth: document.body.scrollWidth,
+                    domContentLoaded: nav ? nav.domContentLoadedEventEnd : 0,
+                    resources: performance.getEntriesByType('resource').length
+                  };
+                });
+                if (metrics.scrollWidth > metrics.viewport + 2 || metrics.bodyScrollWidth > metrics.viewport + 2) {
+                  report.overflow.push({ file, width, metrics });
+                }
+                report.performance.push({ file, width, elapsed: Date.now() - started, ...metrics });
+              }
+              await context.close();
+            }
+
+            for (const file of ['index.html', 'astrology.html', 'runes.html', 'candles.html', 'education.html', 'faq.html'].filter((file) => pages.includes(file))) {
+              const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+              const page = await context.newPage();
+              await page.goto(`http://127.0.0.1:8011/${file}`, { waitUntil: 'domcontentloaded' });
+              await page.waitForTimeout(300);
+              const results = await new AxeBuilder({ page }).analyze();
+              report.accessibility.push({
+                file,
+                violations: results.violations.map((item) => ({ id: item.id, impact: item.impact, description: item.description, nodes: item.nodes.length }))
+              });
+              await context.close();
+            }
+
+            await browser.close();
+            fs.writeFileSync(path.join(out, 'visual-audit.json'), JSON.stringify(report, null, 2));
+
+            const critical = report.accessibility.flatMap((entry) => entry.violations.filter((item) => item.impact === 'critical'));
+            if (report.overflow.length || report.pageErrors.length || critical.length) {
+              console.error(JSON.stringify({ overflow: report.overflow, pageErrors: report.pageErrors, critical }, null, 2));
+              process.exit(1);
+            }
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          JS
+
+          node /tmp/editorial-qa/audit.cjs
+
+      - name: Commit redesign to feature branch
+        shell: bash
+        run: |
+          git config user.name "openai-design-agent"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- '*.html'
+          if ! git diff --cached --quiet; then
+            git commit -m "style: connect editorial design system"
+            git push origin HEAD:agent/editorial-astrology-redesign
+          fi
+
+      - name: Upload audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: editorial-audit-${{ github.run_id }}
+          path: audit
+          if-no-files-found: warn
