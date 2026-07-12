@@ -1,16 +1,18 @@
-name: Run editorial redesign
+name: Editorial redesign PR audit
 
 on:
-  push:
+  pull_request:
     branches:
       - main
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   redesign:
-    if: github.event.head_commit.message == 'chore: run editorial redesign'
+    if: github.head_ref == 'agent/editorial-astrology-redesign'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -46,7 +48,7 @@ jobs:
                   path.write_text(updated, encoding='utf-8')
           PY
 
-      - name: Guard texts prices links forms and routes
+      - name: Guard immutable content
         shell: bash
         run: |
           git fetch origin main
@@ -92,9 +94,8 @@ jobs:
 
           failures = []
           report = []
-          pages = sorted(Path('.').glob('*.html'))
 
-          for page in pages:
+          for page in sorted(Path('.').glob('*.html')):
               baseline = subprocess.check_output(['git', 'show', f'origin/main:{page.as_posix()}'], text=True, encoding='utf-8')
               current = page.read_text(encoding='utf-8')
               cleaned = current.replace(css_tag, '').replace(script_tag, '')
@@ -121,8 +122,7 @@ jobs:
                   parsed = urlparse(href)
                   if parsed.scheme or href.startswith(('#', 'mailto:', 'tel:')):
                       continue
-                  route = parsed.path
-                  if route.endswith('.html') and not Path(route.lstrip('/')).exists():
+                  if parsed.path.endswith('.html') and not Path(parsed.path.lstrip('/')).exists():
                       failures.append(f'{page}: missing route {href}')
 
               report.append({
@@ -296,7 +296,7 @@ jobs:
 
           node /tmp/editorial-qa/audit.cjs
 
-      - name: Commit redesign to feature branch
+      - name: Commit resource connections
         shell: bash
         run: |
           git config user.name "openai-design-agent"
